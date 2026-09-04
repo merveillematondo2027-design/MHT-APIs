@@ -1,17 +1,17 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { 
-  User, 
-  onAuthStateChanged, 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  signInWithPopup, 
-  signOut, 
+import {
+  User,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signInWithPopup,
+  signOut,
   sendPasswordResetEmail,
   updateProfile
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { auth, googleProvider, db } from '../lib/firebase';
-import { UserProfile, CreditWallet, UserRole, AccountStatus } from '../types';
+import { UserProfile, CreditWallet, UserRole } from '../types';
 import { ensureSeedDataInitialized } from '../lib/seedData';
 
 interface AuthContextType {
@@ -43,20 +43,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState<boolean>(true);
   const [activeRoleView, setActiveRoleView] = useState<UserRole | null>(null);
 
-  // Initialize seed data on startup
   useEffect(() => {
-    ensureSeedDataInitialized();
-  }, []);
+    let unsubUser: (() => void) | undefined;
+    let unsubWallet: (() => void) | undefined;
 
-  useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+      if (unsubUser) {
+        unsubUser();
+        unsubUser = undefined;
+      }
+      if (unsubWallet) {
+        unsubWallet();
+        unsubWallet = undefined;
+      }
+
       setCurrentUser(user);
+
       if (user) {
-        // Fetch or create user profile
+        const normalizedEmail = user.email?.toLowerCase() || '';
+        const isSuperAdminEmail = ADMIN_EMAILS.includes(normalizedEmail);
+
+        if (isSuperAdminEmail) {
+          await ensureSeedDataInitialized();
+        }
+
         const userDocRef = doc(db, 'users', user.uid);
         const userSnapshot = await getDoc(userDocRef);
-
-        const isSuperAdminEmail = ADMIN_EMAILS.includes(user.email?.toLowerCase() || '');
         const defaultRole: UserRole = isSuperAdminEmail ? 'admin_general' : 'developer';
 
         if (!userSnapshot.exists()) {
@@ -76,7 +88,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           await setDoc(userDocRef, newProfile);
           setUserProfile(newProfile);
 
-          // Setup initial wallet
           const walletRef = doc(db, 'credit_wallets', user.uid);
           const initialWallet: CreditWallet = {
             uid: user.uid,
@@ -88,7 +99,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           };
           await setDoc(walletRef, initialWallet);
 
-          // Setup welcome bonus transaction
           const txnId = `txn_welcome_${Date.now()}`;
           await setDoc(doc(db, 'credit_transactions', txnId), {
             id: txnId,
@@ -103,12 +113,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             createdAt: new Date().toISOString()
           });
 
-          // Create default sandbox key
           const keyId = `key_test_${Math.random().toString(36).substring(2, 10)}`;
           const randomPart = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
           await setDoc(doc(db, 'api_keys', keyId), {
             id: keyId,
-            keyId: keyId,
+            keyId,
             keyPrefix: 'mht_test_',
             maskedKey: `mht_test_••••••••${randomPart.slice(-4)}`,
             keyHash: `sha256_${randomPart.substring(0, 16)}`,
@@ -121,7 +130,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             permissions: ['all_sandbox']
           });
 
-          // Create welcome notification
           const notifId = `notif_${Date.now()}`;
           await setDoc(doc(db, 'notifications', notifId), {
             id: notifId,
@@ -133,25 +141,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             linkTo: '/dashboard',
             createdAt: new Date().toISOString()
           });
-
         } else {
           setUserProfile(userSnapshot.data() as UserProfile);
         }
 
-        // Listen to User Profile changes
-        const unsubUser = onSnapshot(userDocRef, (snap) => {
+        unsubUser = onSnapshot(userDocRef, (snap) => {
           if (snap.exists()) {
             setUserProfile(snap.data() as UserProfile);
           }
         });
 
-        // Listen to Credit Wallet changes
         const walletRef = doc(db, 'credit_wallets', user.uid);
-        const unsubWallet = onSnapshot(walletRef, (snap) => {
+        unsubWallet = onSnapshot(walletRef, (snap) => {
           if (snap.exists()) {
             setWallet(snap.data() as CreditWallet);
           } else {
-            // fallback create
             const fallbackWallet: CreditWallet = {
               uid: user.uid,
               creditBalance: 25.00,
@@ -166,10 +170,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
 
         setLoading(false);
-        return () => {
-          unsubUser();
-          unsubWallet();
-        };
       } else {
         setUserProfile(null);
         setWallet(null);
@@ -177,7 +177,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
 
-    return () => unsubscribeAuth();
+    return () => {
+      unsubscribeAuth();
+      if (unsubUser) unsubUser();
+      if (unsubWallet) unsubWallet();
+    };
   }, []);
 
   const loginWithEmail = async (email: string, pass: string) => {
@@ -185,8 +189,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const registerWithEmail = async (
-    email: string, 
-    pass: string, 
+    email: string,
+    pass: string,
     details: { displayName: string; companyName?: string; country?: string; phone?: string }
   ) => {
     const res = await createUserWithEmailAndPassword(auth, email, pass);
@@ -194,16 +198,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await updateProfile(res.user, { displayName: details.displayName });
       const isSuperAdminEmail = ADMIN_EMAILS.includes(email.toLowerCase());
       const role: UserRole = isSuperAdminEmail ? 'admin_general' : 'developer';
-      
+
       const newProfile: UserProfile = {
         uid: res.user.uid,
         displayName: details.displayName,
-        email: email,
+        email,
         phone: details.phone || '',
         photoURL: '',
         companyName: details.companyName || '',
         country: details.country || 'République Démocratique du Congo',
-        role: role,
+        role,
         accountStatus: 'active',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -247,7 +251,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const actualRole = userProfile?.role || 'developer';
   const effectiveRole = activeRoleView || actualRole;
-  const isSuperAdmin = actualRole === 'admin_general' || ADMIN_EMAILS.includes(currentUser?.email || '');
+  const isSuperAdmin = actualRole === 'admin_general' || ADMIN_EMAILS.includes(currentUser?.email?.toLowerCase() || '');
   const isAdmin = isSuperAdmin || actualRole === 'admin';
 
   return (
