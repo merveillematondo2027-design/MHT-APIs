@@ -1,0 +1,110 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function getUserRole() {
+      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
+        : 'developer';
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && (
+        getUserRole() == 'admin' || 
+        getUserRole() == 'admin_general' ||
+        (request.auth.token.email == 'merveillematondo2027@gmail.com')
+      );
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if (isOwner(userId) && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'accountStatus']))) || isAdmin();
+      allow delete: if isAdmin();
+    }
+    
+    // API Providers collection (catalog is accessible to all)
+    match /api_providers/{providerId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    // API Products collection (catalog is accessible to all)
+    match /api_products/{productId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    // API Keys collection
+    match /api_keys/{keyId} {
+      allow read: if (isAuthenticated() && resource.data.ownerId == request.auth.uid) || isAdmin();
+      allow create: if isAuthenticated() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if (isAuthenticated() && resource.data.ownerId == request.auth.uid) || isAdmin();
+      allow delete: if isAdmin();
+    }
+    
+    // Credit Wallets
+    match /credit_wallets/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) || isAdmin();
+      allow update: if isOwner(userId) || isAdmin();
+    }
+    
+    // Credit Transactions
+    match /credit_transactions/{transactionId} {
+      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin();
+      allow create: if isAuthenticated() && (request.resource.data.userId == request.auth.uid || isAdmin());
+      allow update, delete: if isAdmin();
+    }
+    
+    // API Request Logs
+    match /api_request_logs/{logId} {
+      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin();
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+    
+    // Billing Transactions & Subscriptions
+    match /billing_transactions/{id} {
+      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin();
+      allow create: if isAuthenticated() && (request.resource.data.userId == request.auth.uid || isAdmin());
+      allow update, delete: if isAdmin();
+    }
+    
+    match /subscriptions/{id} {
+      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin();
+      allow write: if (isAuthenticated() && request.resource.data.userId == request.auth.uid) || isAdmin();
+    }
+    
+    // Notifications
+    match /notifications/{id} {
+      allow read: if (isAuthenticated() && (resource.data.userId == request.auth.uid || resource.data.userId == 'broadcast' || (resource.data.userId == 'admin' && isAdmin()))) || isAdmin();
+      allow create: if isAuthenticated();
+      allow update: if (isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin()));
+      allow delete: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin();
+    }
+    
+    // Admin Audit Logs
+    match /admin_audit_logs/{id} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated();
+      allow update, delete: if false; // immutable audit trail
+    }
+    
+    // System Settings
+    match /system_settings/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}

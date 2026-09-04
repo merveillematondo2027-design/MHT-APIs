@@ -1,0 +1,194 @@
+{
+  "entities": {
+    "users": {
+      "title": "User Profiles",
+      "description": "User profile records containing role, company, contact details and account status",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "companyName": { "type": "string" },
+        "country": { "type": "string" },
+        "role": { "type": "string", "enum": ["developer", "business", "admin", "admin_general"] },
+        "accountStatus": { "type": "string", "enum": ["active", "suspended", "pending"] },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["uid", "email", "role", "accountStatus"]
+    },
+    "api_providers": {
+      "title": "API Providers",
+      "description": "Integrated and partner API providers (Google, OpenAI, Telecoms, Banks, etc.)",
+      "properties": {
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "status": { "type": "string", "enum": ["ACTIVE", "DEGRADED", "MAINTENANCE", "DISABLED", "PENDING_INTEGRATION"] },
+        "environment": { "type": "string" },
+        "website": { "type": "string" },
+        "services": { "type": "array" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["name", "category", "status"]
+    },
+    "api_products": {
+      "title": "API Products",
+      "description": "Products and services offered via MHT Gateway",
+      "properties": {
+        "name": { "type": "string" },
+        "slug": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "providerId": { "type": "string" },
+        "status": { "type": "string", "enum": ["AVAILABLE", "SANDBOX", "COMING_SOON", "PARTNER_REQUIRED"] },
+        "pricingModel": { "type": "string" },
+        "pricePerUnit": { "type": "number" },
+        "currency": { "type": "string" },
+        "unitName": { "type": "string" },
+        "documentation": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["name", "slug", "category", "status"]
+    },
+    "api_keys": {
+      "title": "API Keys",
+      "description": "Developer API keys for accessing sandbox and live MHT Gateway",
+      "properties": {
+        "keyId": { "type": "string" },
+        "keyPrefix": { "type": "string" },
+        "keyHash": { "type": "string" },
+        "environment": { "type": "string", "enum": ["TEST", "LIVE"] },
+        "name": { "type": "string" },
+        "status": { "type": "string", "enum": ["ACTIVE", "REVOKED", "DISABLED"] },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "lastUsedAt": { "type": "string" },
+        "revokedAt": { "type": "string" }
+      },
+      "required": ["keyId", "keyPrefix", "environment", "name", "status", "ownerId"]
+    },
+    "credit_wallets": {
+      "title": "Credit Wallets",
+      "description": "User credit wallet balance and quotas",
+      "properties": {
+        "uid": { "type": "string" },
+        "creditBalance": { "type": "number" },
+        "reservedCredits": { "type": "number" },
+        "totalConsumed": { "type": "number" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["uid", "creditBalance"]
+    },
+    "credit_transactions": {
+      "title": "Credit Transactions",
+      "description": "Ledger of credit additions, usages, bonuses and refunds",
+      "properties": {
+        "userId": { "type": "string" },
+        "type": { "type": "string", "enum": ["purchase", "usage", "refund", "bonus", "adjustment"] },
+        "amount": { "type": "number" },
+        "balanceBefore": { "type": "number" },
+        "balanceAfter": { "type": "number" },
+        "reference": { "type": "string" },
+        "description": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["userId", "type", "amount", "balanceAfter"]
+    },
+    "api_request_logs": {
+      "title": "API Request Logs",
+      "description": "Sanitized request logs for diagnostics, billing and analytics",
+      "properties": {
+        "requestId": { "type": "string" },
+        "userId": { "type": "string" },
+        "apiKeyId": { "type": "string" },
+        "productId": { "type": "string" },
+        "providerId": { "type": "string" },
+        "environment": { "type": "string" },
+        "endpoint": { "type": "string" },
+        "method": { "type": "string" },
+        "status": { "type": "string" },
+        "statusCode": { "type": "number" },
+        "units": { "type": "number" },
+        "providerCost": { "type": "number" },
+        "customerCost": { "type": "number" },
+        "currency": { "type": "string" },
+        "latencyMs": { "type": "number" },
+        "errorCode": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["requestId", "userId", "status", "endpoint"]
+    },
+    "billing_transactions": {
+      "title": "Billing Transactions",
+      "description": "Invoicing and payment history",
+      "properties": {
+        "userId": { "type": "string" },
+        "amount": { "type": "number" },
+        "currency": { "type": "string" },
+        "status": { "type": "string" },
+        "paymentMethod": { "type": "string" },
+        "invoiceNumber": { "type": "string" },
+        "planName": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["userId", "amount", "status"]
+    },
+    "subscriptions": {
+      "title": "Subscriptions",
+      "description": "Developer and enterprise tier subscriptions",
+      "properties": {
+        "userId": { "type": "string" },
+        "planId": { "type": "string" },
+        "status": { "type": "string" },
+        "startDate": { "type": "string" },
+        "nextRenewalDate": { "type": "string" },
+        "autoRenew": { "type": "boolean" }
+      },
+      "required": ["userId", "planId", "status"]
+    },
+    "notifications": {
+      "title": "Notifications",
+      "description": "User and system operational alerts",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string" },
+        "read": { "type": "boolean" },
+        "linkTo": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["userId", "title", "message", "type"]
+    },
+    "admin_audit_logs": {
+      "title": "Admin Audit Logs",
+      "description": "Audit trail for sensitive admin actions",
+      "properties": {
+        "actorId": { "type": "string" },
+        "actorRole": { "type": "string" },
+        "action": { "type": "string" },
+        "targetType": { "type": "string" },
+        "targetId": { "type": "string" },
+        "result": { "type": "string" },
+        "metadata": { "type": "object" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["actorId", "action", "result"]
+    },
+    "system_settings": {
+      "title": "System Settings",
+      "description": "Global platform configurations and pricing margins",
+      "properties": {
+        "pricingMarkupPercent": { "type": "number" },
+        "maintenanceMode": { "type": "boolean" },
+        "globalNotice": { "type": "string" },
+        "allowedRegistration": { "type": "boolean" },
+        "updatedAt": { "type": "string" }
+      }
+    }
+  }
+}

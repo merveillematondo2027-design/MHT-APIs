@@ -1,0 +1,6 @@
+{
+  "name": "MHT APIs",
+  "description": "Plateforme API et console développeur de Mungwele Holding & Technology (MHT) - Passerelle d'accès unifiée aux services IA, Paiements, Télécoms, Cloud et Identité.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
