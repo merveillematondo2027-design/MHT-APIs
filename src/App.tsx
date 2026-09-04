@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from './context/AuthContext';
 import { Navbar } from './components/layout/Navbar';
 import { Sidebar } from './components/layout/Sidebar';
@@ -16,28 +16,16 @@ import { UserProfileView } from './components/profile/UserProfileView';
 import { AuthModal } from './components/auth/AuthModal';
 import { NotificationDrawer } from './components/notifications/NotificationDrawer';
 import { ApiProduct } from './types';
-import { seedInitialCatalogData } from './lib/seedData';
 
 export function App() {
-  const { currentUser, userProfile, isAdmin, loading } = useAuth();
-  
-  // Navigation view state
+  const { currentUser, loading } = useAuth();
+
   const [currentView, setCurrentView] = useState<string>('landing');
   const [selectedProductForSandbox, setSelectedProductForSandbox] = useState<ApiProduct | null>(null);
-  
-  // Modals & Drawers
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
   const [isNotificationDrawerOpen, setIsNotificationDrawerOpen] = useState(false);
 
-  // Initialize catalog in background on first load
-  useEffect(() => {
-    seedInitialCatalogData().catch((err) => {
-      console.warn('Initial seed check note:', err);
-    });
-  }, []);
-
-  // When user logs in, if on landing page, can stay or redirect to console if clicked
   const handleOpenAuth = (mode: 'login' | 'register' = 'login') => {
     setAuthModalMode(mode);
     setIsAuthModalOpen(true);
@@ -61,8 +49,6 @@ export function App() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-blue-600 font-sans">
-      
-      {/* Top Navigation Bar */}
       <Navbar
         currentView={currentView}
         setCurrentView={setCurrentView}
@@ -70,7 +56,6 @@ export function App() {
         onOpenNotifications={() => setIsNotificationDrawerOpen(true)}
       />
 
-      {/* Main Container */}
       {isLanding ? (
         <main className="flex-1">
           <LandingPage
@@ -87,19 +72,16 @@ export function App() {
         </main>
       ) : (
         <div className="flex-1 flex w-full">
-          
-          {/* Desktop Left Sidebar */}
           <Sidebar
             currentView={currentView}
             setCurrentView={setCurrentView}
           />
 
-          {/* Main Workspace Area */}
           <main className="flex-1 pb-20 lg:pb-8 overflow-y-auto">
             {currentView === 'dashboard' && (
               <DeveloperDashboard
                 onNavigate={setCurrentView}
-                onOpenSandboxWithProduct={(prodId) => {
+                onOpenSandboxWithProduct={() => {
                   setCurrentView('sandbox');
                 }}
               />
@@ -112,41 +94,21 @@ export function App() {
               />
             )}
 
-            {currentView === 'keys' && (
-              <ApiKeysView />
-            )}
+            {currentView === 'keys' && <ApiKeysView />}
 
             {currentView === 'sandbox' && (
-              <SandboxPlaygroundView
-                initialProduct={selectedProductForSandbox}
-              />
+              <SandboxPlaygroundView initialProduct={selectedProductForSandbox} />
             )}
 
-            {currentView === 'logs' && (
-              <RequestLogsView />
-            )}
-
-            {currentView === 'billing' && (
-              <BillingView />
-            )}
-
-            {currentView === 'docs' && (
-              <DocumentationView />
-            )}
-
-            {currentView === 'admin' && (
-              <AdminConsoleView />
-            )}
-
-            {currentView === 'profile' && (
-              <UserProfileView />
-            )}
+            {currentView === 'logs' && <RequestLogsView />}
+            {currentView === 'billing' && <BillingView />}
+            {currentView === 'docs' && <DocumentationView />}
+            {currentView === 'admin' && <AdminConsoleView />}
+            {currentView === 'profile' && <UserProfileView />}
           </main>
-
         </div>
       )}
 
-      {/* Mobile Bottom Navigation (Visible when inside console or logged in) */}
       {!isLanding && (
         <MobileBottomNav
           currentView={currentView}
@@ -154,7 +116,6 @@ export function App() {
         />
       )}
 
-      {/* Auth Modal */}
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
@@ -166,13 +127,11 @@ export function App() {
         }}
       />
 
-      {/* Notification Drawer */}
       <NotificationDrawer
         isOpen={isNotificationDrawerOpen}
         onClose={() => setIsNotificationDrawerOpen(false)}
         onNavigate={setCurrentView}
       />
-
     </div>
   );
 }
